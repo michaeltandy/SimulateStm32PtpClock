@@ -4,12 +4,9 @@ package uk.me.mjt.simulatestm32ptpclock;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-
+import static uk.me.mjt.simulatestm32ptpclock.Constants.*;
 
 public class BiasedCrystalSimulation {
-    
-    private final BigDecimal ONE_BILLION = new BigDecimal("1000000000");
-    private final BigDecimal CLOCK_RATE_HZ = new BigDecimal("180000000");
     
     public BigDecimal trueTimeSeconds = BigDecimal.ZERO;
     private BigDecimal previousClocks = BigDecimal.ZERO;
