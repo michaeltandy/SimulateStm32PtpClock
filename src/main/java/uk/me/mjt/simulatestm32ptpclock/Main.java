@@ -14,24 +14,10 @@ public class Main {
     private static final Random rand = new Random();
 
     public static void main(String[] args) {
-        long lowestScoreSoFar = Long.MAX_VALUE;
-        double bestP = Double.NaN;
-        double bestD = Double.NaN;
-        for (double P : between(-0.000817-0.0001, -0.000817+0.0001, 100)) {
-            for (double D : between(-0.049-0.01, -0.049+0.01, 100)) {
-                long score = evaluatePD(P, D);
-                if (score < lowestScoreSoFar) {
-                    lowestScoreSoFar = score;
-                    bestP = P;
-                    bestD = D;
-                    System.out.printf("Good performance for P=%.6f D=%.6f, score %d\n",P,D,score);
-                }
-            }
-        }
+        double[] chosenPD = selectGoodPD();
         
         System.out.println("Simulation with selected P/D values:\n");
-        printCsv(bestP, bestD);
-        
+        printCsv(chosenPD[0], chosenPD[1]);
     }
     
     private static void printCsv(double P, double D) {
@@ -56,7 +42,7 @@ public class Main {
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
-        for (int ts = 0; ts < 600; ts++) {
+        for (int second = 0; second < 60*20; second++) {
             BigInteger clocks = crystal.clockBySeconds(BigDecimal.ONE);
             ptpClock.clockBy(clocks);
 
@@ -66,12 +52,48 @@ public class Main {
             tsr.ptpClockTimeNanoseconds = ptpClock.getTimeNanoseconds();
             result.add(tsr);
             
-            BigInteger randomNoise = new BigInteger(randbetween(-1000, 1000) + "000");
+            BigInteger randomNoiseNs = new BigInteger(randbetween(-1000, 1000) + "000");
             BigInteger newAddend = sim.updateDataGetNewAddend(crystal.trueTimeSeconds,
-                    ptpClock.getTimeNanoseconds().add(randomNoise));
+                    ptpClock.getTimeNanoseconds().add(randomNoiseNs));
+            
             ptpClock.addend = newAddend;
         }
         
+        return result;
+    }
+    
+    private static double[] selectGoodPD() {
+        double bestP = -0.000817;
+        double bestD = -0.049;
+        long bestScore = Long.MAX_VALUE;
+        
+        double[] scales = {1.0, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001};
+        
+        for (double s : scales) {
+            double pLow = bestP-0.05*s;
+            double pHigh = Math.min(bestP+0.05*s, 0);
+            double dLow = bestD-0.1*s;
+            double dHigh = Math.min(bestD+0.1*s, 0);
+            for (double P : between(pLow, pHigh, 20)) {
+                for (double D : between(dLow, dHigh, 20)) {
+                    if (P<-0.0001 && D<-0.0001) {
+                        long score = evaluatePD(P, D);
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestP = P;
+                            bestD = D;
+                            System.out.printf("Good performance for P=%.6f D=%.6f, score %d\n",P,D,score);
+                        }
+                    }
+                }
+            }
+            double percentOfRangeP = 100*(bestP-pLow)/(pHigh-pLow);
+            System.out.printf("Best P %.6f for range %.6f to %.6f, %.1f%%\n",bestP,pLow,pHigh,percentOfRangeP);
+            double percentOfRangeD = 100*(bestD-dLow)/(dHigh-dLow);
+            System.out.printf("Best D %.6f for range %.6f to %.6f, %.1f%%\n",bestD,dLow,dHigh, percentOfRangeD);
+        }
+        
+        double[] result = {bestP, bestD};
         return result;
     }
     
@@ -81,20 +103,21 @@ public class Main {
         long overallScore = 0;
         
         long lowestUndershoot = 0;
-        long maxDeviationAfterTwoMins = 0;
+        long maxDeviationAfterSomeTime = 0;
         
         for (int repeat=0 ; repeat<10 ; repeat++) {
             FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P, D);
             
             for (TimeStepResult tsr : simulateFeedback(sim)) {
                 lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
-                if (tsr.getTrueTimeSeconds() > 300) {
-                    maxDeviationAfterTwoMins = Math.max(maxDeviationAfterTwoMins,
+                if (tsr.getTrueTimeSeconds() > 10*60) {
+                    maxDeviationAfterSomeTime = Math.max(maxDeviationAfterSomeTime,
                             Math.abs(tsr.getPtpClockErrorNanos()));
                 }
             }
             
-            overallScore += Math.abs(lowestUndershoot)/10 + Math.abs(maxDeviationAfterTwoMins);
+            //overallScore += Math.abs(lowestUndershoot) + Math.abs(maxDeviationAfterTwoMins);
+            overallScore += Math.abs(maxDeviationAfterSomeTime);
         }
         
         return overallScore;
@@ -133,7 +156,7 @@ public class Main {
     }
     
     private static Iterable<Double> between(final double low, final double high, final int count) {
-        if (high == low) throw new RuntimeException("high!=low");
+        if (high == low) throw new RuntimeException("high==low");
         if (count < 2) throw new RuntimeException("count must be >= 2");
         if (low<high) return between(high, low, count);
         

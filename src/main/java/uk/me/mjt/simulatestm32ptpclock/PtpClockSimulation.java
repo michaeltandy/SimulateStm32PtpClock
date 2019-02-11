@@ -17,6 +17,9 @@ public class PtpClockSimulation {
             throw new RuntimeException("Simulation doesn't support negative clocking.");
         }
         
+        if (!isAddendReasonable())
+            throw new AddendUnreasonableException();
+        
         BigInteger accumulatorNext = accumulator.add(clocks.multiply(addend));
         BigInteger[] accDiv = accumulatorNext.divideAndRemainder(Constants.TWO_POW_32);
         this.accumulator = accDiv[1];
@@ -32,6 +35,12 @@ public class PtpClockSimulation {
             throw new RuntimeException("Simulation can't count higher than 100 years.");
         }
         
+    }
+    
+    private boolean isAddendReasonable() {
+        BigInteger basicAddend = new BigInteger("1193046471");
+        long approxPPB = addend.subtract(basicAddend).abs().longValueExact();
+        return (approxPPB < 20000000L);
     }
     
     public BigInteger getTimeNanoseconds() {
