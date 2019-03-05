@@ -8,9 +8,14 @@ import static uk.me.mjt.simulatestm32ptpclock.Constants.*;
 
 public class BiasedCrystalSimulation {
     
+    public final BigDecimal baseClockRateHz;
     public BigDecimal trueTimeSeconds = BigDecimal.ZERO;
     private BigDecimal previousClocks = BigDecimal.ZERO;
     private BigDecimal biasScale = BigDecimal.ONE;
+    
+    public BiasedCrystalSimulation(BigDecimal baseClockRateHz) {
+        this.baseClockRateHz = baseClockRateHz;
+    }
     
     public void setBiasPartsPerBillion(BigInteger biasPartsPerBillion) {
         BigDecimal bias = new BigDecimal(biasPartsPerBillion).divide(ONE_BILLION);
@@ -23,7 +28,7 @@ public class BiasedCrystalSimulation {
             trueTimeSeconds = trueTimeSeconds.setScale(20, RoundingMode.HALF_EVEN);
         }
         
-        BigDecimal deltaClocks = deltaSecs.multiply(biasScale).multiply(CLOCK_RATE_HZ);
+        BigDecimal deltaClocks = deltaSecs.multiply(biasScale).multiply(baseClockRateHz);
         BigDecimal subsequentClocks = previousClocks.add(deltaClocks);
         if (subsequentClocks.scale() > 12) {
             subsequentClocks.setScale(12, RoundingMode.HALF_EVEN);
@@ -46,11 +51,11 @@ public class BiasedCrystalSimulation {
     }
     
     public BigInteger getBiasedTimeNanoseconds() {
-        return previousClocks.divide(CLOCK_RATE_HZ).multiply(ONE_BILLION).toBigInteger();
+        return previousClocks.divide(baseClockRateHz).multiply(ONE_BILLION).toBigInteger();
     }
     
     public String toString() {
-        return trueTimeSeconds + "s unbiased " + previousClocks.divide(CLOCK_RATE_HZ) + "s biased";
+        return trueTimeSeconds + "s unbiased " + previousClocks.divide(baseClockRateHz) + "s biased";
     }
 
 }

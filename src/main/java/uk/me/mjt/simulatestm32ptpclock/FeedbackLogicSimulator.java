@@ -6,19 +6,20 @@ import java.math.BigInteger;
 
 
 public class FeedbackLogicSimulator {
-    private BigInteger addend = new BigInteger("1193046471");
+    private BigInteger controlOutput;
     
     private final BigDecimal proportionalGain;// = new BigDecimal("-0.002");
     private final BigDecimal derivativeGain;// = new BigDecimal("-0.02");
     
     private BigInteger lastErrorNanos = null;
     
-    public FeedbackLogicSimulator(double p, double d) {
+    public FeedbackLogicSimulator(double p, double d, BigInteger initialValue) {
         this.proportionalGain = new BigDecimal(p);
         this.derivativeGain = new BigDecimal(d);
+        this.controlOutput = initialValue;
     }
     
-    public BigInteger updateDataGetNewAddend(BigDecimal trueTimeSeconds, BigInteger measuredTimeNanoseconds) {
+    public BigInteger updateDataGetNewControlOutput(BigDecimal trueTimeSeconds, BigInteger measuredTimeNanoseconds) {
         BigInteger trueTimeNanos = trueTimeSeconds.multiply(new BigDecimal("1000000000")).toBigInteger();
         BigInteger errorNanos = measuredTimeNanoseconds.subtract(trueTimeNanos);
         
@@ -34,12 +35,12 @@ public class FeedbackLogicSimulator {
             BigDecimal pid = proportionalGain.multiply(toBD(errorNanos))
                     .add(derivativeGain.multiply(toBD(derivativeTerm)));
             
-            addend = addend.add(pid.toBigInteger());
+            controlOutput = controlOutput.add(pid.toBigInteger());
         }
         
         lastErrorNanos = errorNanos;
         
-        return addend;
+        return controlOutput;
     }
     
     private boolean isNegative(BigInteger bi) {

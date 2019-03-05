@@ -22,7 +22,7 @@ public class Main {
     
     private static void printCsv(double P, double D) {
         System.out.println("0\t0\t0\t0");
-        FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P,D);
+        FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P,D, new BigInteger("1193046471"));
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -32,13 +32,13 @@ public class Main {
     }
     
     private static List<TimeStepResult> simulateFeedback(FeedbackLogicSimulator sim) {
-        BiasedCrystalSimulation crystal = new BiasedCrystalSimulation();
+        BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(ONE_HUNDRED_EIGHTY_MHZ);
         crystal.setBiasPartsPerBillion(new BigInteger("30000")); // 30ppm
 
         PtpClockSimulation ptpClock = new PtpClockSimulation();
 
         ptpClock.subSecondAddend = new BigInteger("20");
-        ptpClock.addend = sim.updateDataGetNewAddend(BigDecimal.ZERO, BigInteger.ZERO);
+        ptpClock.addend = sim.updateDataGetNewControlOutput(BigDecimal.ZERO, BigInteger.ZERO);
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
@@ -53,7 +53,7 @@ public class Main {
             result.add(tsr);
             
             BigInteger randomNoiseNs = new BigInteger(randbetween(-1000, 1000) + "000");
-            BigInteger newAddend = sim.updateDataGetNewAddend(crystal.trueTimeSeconds,
+            BigInteger newAddend = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
                     ptpClock.getTimeNanoseconds().add(randomNoiseNs));
             
             ptpClock.addend = newAddend;
@@ -106,7 +106,7 @@ public class Main {
         long maxDeviationAfterSomeTime = 0;
         
         for (int repeat=0 ; repeat<10 ; repeat++) {
-            FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P, D);
+            FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P, D, new BigInteger("1193046471"));
             
             for (TimeStepResult tsr : simulateFeedback(sim)) {
                 lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
@@ -123,17 +123,6 @@ public class Main {
         return overallScore;
     }
     
-    private static class TimeStepResult {
-        BigInteger trueTimeNanoseconds;
-        BigInteger biasedCrystalTimeNanoseconds;
-        BigInteger ptpClockTimeNanoseconds;
-        long getPtpClockErrorNanos() {
-            return ptpClockTimeNanoseconds.subtract(trueTimeNanoseconds).longValueExact();
-        }
-        long getTrueTimeSeconds() {
-            return trueTimeNanoseconds.divide(ONE_BILLION.toBigInteger()).longValueExact();
-        }
-    }
     
     /*private static int noiseModelMicroseconds() {
         switch(rand.nextInt(10)) {
@@ -151,7 +140,7 @@ public class Main {
         throw new RuntimeException("Should never get here?");
     }*/
 
-    private static int randbetween(int low, int high) {
+    public static int randbetween(int low, int high) {
         return rand.nextInt(high-low)+low;
     }
     
