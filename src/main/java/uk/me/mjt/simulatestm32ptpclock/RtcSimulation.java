@@ -30,7 +30,7 @@ public class RtcSimulation {
         
         long completeRollovers = rtcClockCycles.divide(overflowThreshold).intValueExact();
         countOfPulsesMasked += completeRollovers * maskedPulseSet.size();
-        countOfPulsesMasked -= addedPulseSet.size();
+        countOfPulsesMasked -= completeRollovers * addedPulseSet.size();
         
         if (cal_cnt.compareTo(overflowThreshold) > 0) {
             // Adjustment to CALM/CALP caused overflow.
@@ -88,6 +88,10 @@ public class RtcSimulation {
     
     private static boolean greaterThan(BigInteger A, BigInteger B) {
         return A.compareTo(B) > 0;
+    }
+    
+    public BigInteger getTimeClocks() {
+        return timeClocks;
     }
     
     public BigInteger getTimeNanoseconds() {

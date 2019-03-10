@@ -10,12 +10,12 @@ import java.util.List;
 public class RtcControlTest {
     public static void main(String[] args) {
         
-        double[] chosenPD = selectGoodPD();
+        //double[] chosenPD = selectGoodPD();
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0");
-        FeedbackLogicSimulator sim = new FeedbackLogicSimulator(chosenPD[0], chosenPD[1], BigInteger.ZERO);
+        FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(0.0001, 0.001);
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -25,7 +25,7 @@ public class RtcControlTest {
         }
     }
     
-    private static List<TimeStepResult> simulateFeedback(FeedbackLogicSimulator sim) {
+    private static List<TimeStepResult> simulateFeedback(FeedbackMicrosecondBased sim) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.TWO_MHZ);
         crystal.setBiasPartsPerBillion(new BigInteger("30000")); // 30ppm
 
@@ -44,10 +44,9 @@ public class RtcControlTest {
             tsr.biasedCrystalTimeNanoseconds = crystal.getBiasedTimeNanoseconds();
             tsr.ptpClockTimeNanoseconds = rtc.getTimeNanoseconds();
             
-            
-            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-1000, 1000) + "000");
+            //BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-1000, 1000) + "000");
             BigInteger controlOutput = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
-                    rtc.getTimeNanoseconds().add(randomNoiseNs));
+                    rtc.getTimeNanoseconds());//.add(randomNoiseNs));
             
             tsr.controlOutput = controlOutput;
             result.add(tsr);
@@ -113,7 +112,7 @@ public class RtcControlTest {
         long maxDeviationAfterSomeTime = 0;
         
         for (int repeat=0 ; repeat<10 ; repeat++) {
-            FeedbackLogicSimulator sim = new FeedbackLogicSimulator(P, D, new BigInteger("0"));
+            FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(P, D);
             
             for (TimeStepResult tsr : simulateFeedback(sim)) {
                 lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
