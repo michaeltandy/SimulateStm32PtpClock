@@ -32,6 +32,11 @@ public class RtcSimulation {
         countOfPulsesMasked += completeRollovers * maskedPulseSet.size();
         countOfPulsesMasked -= addedPulseSet.size();
         
+        if (cal_cnt.compareTo(overflowThreshold) > 0) {
+            // Adjustment to CALM/CALP caused overflow.
+            cal_cnt = BigInteger.ZERO;
+        }
+        
         BigInteger calCntAfter = cal_cnt.add(rtcClockCycles).mod(overflowThreshold);
         if (calCntAfter.compareTo(cal_cnt) > 0) {
             countOfPulsesMasked += maskedPulseSet

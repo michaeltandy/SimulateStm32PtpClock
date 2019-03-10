@@ -144,8 +144,12 @@ public class Main {
         return rand.nextInt(high-low)+low;
     }
     
-    private static Iterable<Double> between(final double low, final double high, final int count) {
-        if (high == low) throw new RuntimeException("high==low");
+    public static Iterable<Double> between(final double low, final double high, final int count) {
+        if (high == low) {
+            ArrayList<Double> result = new ArrayList();
+            result.add(low);
+            return Collections.unmodifiableList(result);
+        }
         if (count < 2) throw new RuntimeException("count must be >= 2");
         if (low<high) return between(high, low, count);
         
