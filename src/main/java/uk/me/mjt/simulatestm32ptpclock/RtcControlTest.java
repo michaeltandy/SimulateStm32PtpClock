@@ -10,12 +10,13 @@ import java.util.List;
 public class RtcControlTest {
     public static void main(String[] args) {
         
-        //double[] chosenPD = selectGoodPD();
+        double[] chosenPD = selectGoodPD();
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0");
-        FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(0.0001, 0.001);
+        //FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(0.001, 0.01);
+        FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(chosenPD[0], chosenPD[1]);
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -44,9 +45,9 @@ public class RtcControlTest {
             tsr.biasedCrystalTimeNanoseconds = crystal.getBiasedTimeNanoseconds();
             tsr.ptpClockTimeNanoseconds = rtc.getTimeNanoseconds();
             
-            //BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-1000, 1000) + "000");
+            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-1000, 1000) + "000");
             BigInteger controlOutput = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
-                    rtc.getTimeNanoseconds());//.add(randomNoiseNs));
+                    rtc.getTimeNanoseconds().add(randomNoiseNs));
             
             tsr.controlOutput = controlOutput;
             result.add(tsr);
@@ -55,7 +56,7 @@ public class RtcControlTest {
             if (slowClockBy > 511) slowClockBy = 511;
             if (slowClockBy < -511) slowClockBy = -511;
             
-            if (slowClockBy > 0) {
+            if (slowClockBy >= 0) {
                 rtc.CALP = false;
                 rtc.CALM = slowClockBy;
             } else {
@@ -69,19 +70,19 @@ public class RtcControlTest {
     }
     
     private static double[] selectGoodPD() {
-        double bestP = 0.0000001;
-        double bestD = 0.00001;
+        double bestP = 0.1;
+        double bestD = 0.5;
         long bestScore = Long.MAX_VALUE;
         
-        double[] scales = {1.0, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001};
+        double[] scales = {30.0, 10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01, 0.003};
         
         for (double s : scales) {
-            double pLow = Math.max(bestP-0.0005*s, 0);
-            double pHigh = Math.max(bestP+0.0005*s, 0);
-            double dLow = Math.max(bestD-0.001*s, 0);
-            double dHigh = Math.max(bestD+0.001*s, 0);
-            for (double P : Main.between(pLow, pHigh, 20)) {
-                for (double D : Main.between(dLow, dHigh, 20)) {
+            double pLow = Math.max(bestP-0.1*s, 0);
+            double pHigh = Math.max(bestP+0.1*s, 0);
+            double dLow = Math.max(bestD-0.5*s, 0);
+            double dHigh = Math.max(bestD+0.5*s, 0);
+            for (double P : Main.between(pLow, pHigh, 10)) {
+                for (double D : Main.between(dLow, dHigh, 10)) {
                     if (P>0 && D>0) {
                         long score = evaluatePD(P, D);
                         if (score < bestScore) {
@@ -103,8 +104,8 @@ public class RtcControlTest {
         return result;
     }
     
-    // Good performance for P=-0.000817 D=-0.049242
-    // Good performance for P=-7.999999999999996E-4 D=-0.03300000000000002
+    // With zero noise, good performance for P=0.023211 D=0.140000, score 220000
+    // With noise and output/100, good performance for P=0.038318 D=2.291667, score 4218000
     public static long evaluatePD(double P, double D) {
         long overallScore = 0;
         
