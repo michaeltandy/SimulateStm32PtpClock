@@ -5,16 +5,18 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
-public class FeedbackMicrosecondBased implements FeedbackController {
-    private final double proportionalGain;// = new BigDecimal("-0.002");
-    private final double derivativeGain;// = new BigDecimal("-0.02");
+public class FeedbackPID implements FeedbackController {
+    private final double proportionalGain;
+    private final double integralGain;
+    private final double derivativeGain;
     
     private long lastErrorMicros = Long.MAX_VALUE;
     
-    private int controlOutput = 0;
+    private int errorIntegral = 0;
     
-    public FeedbackMicrosecondBased(double p, double d) {
+    public FeedbackPID(double p, double i, double d) {
         this.proportionalGain = p;
+        this.integralGain = i;
         this.derivativeGain = d;
     }
     
@@ -25,15 +27,17 @@ public class FeedbackMicrosecondBased implements FeedbackController {
         
         if (lastErrorMicros != Long.MAX_VALUE) {
             long derivativeTerm = errorMicros-lastErrorMicros;
+            errorIntegral += errorMicros;
             
             double pid = proportionalGain*errorMicros
+                    +integralGain*errorIntegral
                     +derivativeGain*derivativeTerm;
             
-            controlOutput = controlOutput+(int)Math.round(pid);
+            return new BigInteger(""+Math.round(pid));
         }
         
         lastErrorMicros = errorMicros;
         
-        return new BigInteger(""+controlOutput/100);
+        return BigInteger.ZERO;
     }
 }

@@ -144,7 +144,7 @@ public class Main {
         return rand.nextInt(high-low)+low;
     }
     
-    public static Iterable<Double> between(final double low, final double high, final int count) {
+    public static List<Double> between(final double low, final double high, final int count) {
         if (high == low) {
             ArrayList<Double> result = new ArrayList();
             result.add(low);

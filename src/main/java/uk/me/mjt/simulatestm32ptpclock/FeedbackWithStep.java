@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
-public class FeedbackWithStep {
+public class FeedbackWithStep implements FeedbackController {
     private final double proportionalGainA;
     private final double derivativeGainA;
     private final double proportionalGainB;

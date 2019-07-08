@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 
-public class FeedbackMicrosecondBasedWithRampDown {
+public class FeedbackMicrosecondBasedWithRampDown implements FeedbackController{
     private final double proportionalGain;// = new BigDecimal("-0.002");
     private final double derivativeGain;// = new BigDecimal("-0.02");
     

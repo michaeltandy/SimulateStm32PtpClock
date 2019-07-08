@@ -4,12 +4,12 @@ package uk.me.mjt.simulatestm32ptpclock;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
 public class DualTimerControlTest {
     public static void main(String[] args) {
-        
         double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
@@ -17,8 +17,7 @@ public class DualTimerControlTest {
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0\t0");
-        //FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(0.001, 0.01);
-        FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(chosenPD[0], chosenPD[1]);
+        FeedbackController sim = new FeedbackMicrosecondBased(chosenPD[0], chosenPD[1]);
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -28,7 +27,7 @@ public class DualTimerControlTest {
         }
     }
     
-    private static List<TimeStepResult> simulateFeedback(FeedbackMicrosecondBased sim) {
+    private static List<TimeStepResult> simulateFeedback(FeedbackController sim) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.ONE_HUNDRED_EIGHTY_MHZ);
         crystal.setBiasPartsPerBillion(new BigInteger("30000")); // 30ppm
 
@@ -61,43 +60,51 @@ public class DualTimerControlTest {
     }
     
     private static double[] selectGoodPD() {
-        double bestP = 0.1;
-        double bestD = 0.5;
+        double bestValuesSoFar[] = {0.1, 0.5};
         long bestScore = Long.MAX_VALUE;
         
         double[] scales = {30.0, 10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01, 0.003};
         
         for (double s : scales) {
-            double pLow = Math.max(bestP-0.1*s, 0);
-            double pHigh = Math.max(bestP+0.1*s, 0);
-            double dLow = Math.max(bestD-0.5*s, 0);
-            double dHigh = Math.max(bestD+0.5*s, 0);
-            for (double P : Main.between(pLow, pHigh, 10)) {
-                for (double D : Main.between(dLow, dHigh, 10)) {
-                    if (P>0 && D>0) {
-                        long score = evaluatePD(P, D);
-                        if (score < bestScore) {
-                            bestScore = score;
-                            bestP = P;
-                            bestD = D;
-                            System.out.printf("Good performance for P=%.6f D=%.6f, score %d\n",P,D,score);
-                        }
-                    }
+            for (double[] candidate : generateCandidates(bestValuesSoFar, s)) {
+                long score = evaluateParameters(candidate);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestValuesSoFar = candidate;
+                    System.out.printf("Good performance for %s, score %d\n", Arrays.toString(candidate), score);
                 }
             }
-            double percentOfRangeP = 100*(bestP-pLow)/(pHigh-pLow);
-            System.out.printf("Best P %.10f for range %.10f to %.10f, %.1f%%\n",bestP,pLow,pHigh,percentOfRangeP);
-            double percentOfRangeD = 100*(bestD-dLow)/(dHigh-dLow);
-            System.out.printf("Best D %.10f for range %.10f to %.10f, %.1f%%\n",bestD,dLow,dHigh, percentOfRangeD);
+        }
+        return bestValuesSoFar;
+    }
+    
+    private static Iterable<double[]> generateCandidates(double[] baseline, double scale) {
+        double[][] betweenArrays = new double[baseline.length][10];
+        for (int i=0 ; i<baseline.length ; i++) {
+            List<Double> ld = Main.between(Math.max(0,baseline[i]-scale), Math.max(0,baseline[i]+scale), 10);
+            for (int j=0 ; j<10 ; j++) {
+                betweenArrays[i][j] = ld.get(j);
+            }
         }
         
-        double[] result = {bestP, bestD};
+        ArrayList<double []> result = new ArrayList<>();
+        
+        for (int i=0 ; i<(int)Math.pow(10, baseline.length); i++) {
+            int remainder=i;
+            double[] thisEntry = new double[baseline.length];
+            for (int j=0 ; j<baseline.length ; j++) {
+                thisEntry[j] = betweenArrays[j][remainder%10];
+                remainder = remainder/10;
+            }
+            result.add(thisEntry);
+        }
+        
         return result;
     }
     
     // With zero noise, good performance for P=0.023211 D=0.140000, score 220000
     // With noise and output/100, good performance for P=0.038318 D=2.291667, score 4218000
-    public static long evaluatePD(double P, double D) {
+    public static long evaluateParameters(double[] parameters) {
         long overallScore = 0;
         
         long lowestUndershoot = 0;
@@ -105,7 +112,7 @@ public class DualTimerControlTest {
         long rmsDeviationAfterSomeTime = 0;
         
         for (int repeat=0 ; repeat<10 ; repeat++) {
-            FeedbackMicrosecondBased sim = new FeedbackMicrosecondBased(P, D);
+            FeedbackController sim = new FeedbackMicrosecondBased(parameters[0], parameters[1]);
             
             for (TimeStepResult tsr : simulateFeedback(sim)) {
                 lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
