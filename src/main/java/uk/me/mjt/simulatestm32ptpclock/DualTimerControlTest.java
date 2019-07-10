@@ -13,11 +13,12 @@ public class DualTimerControlTest {
         double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
+        //double[] chosenPD = {0.15,0,1};
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0\t0");
-        FeedbackController sim = new FeedbackMicrosecondBased(chosenPD[0], chosenPD[1]);
+        FeedbackController sim = new FeedbackPID(chosenPD[0], chosenPD[1], chosenPD[2]);
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -29,10 +30,10 @@ public class DualTimerControlTest {
     
     private static List<TimeStepResult> simulateFeedback(FeedbackController sim) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.ONE_HUNDRED_EIGHTY_MHZ);
-        crystal.setBiasPartsPerBillion(new BigInteger("30000")); // 30ppm
+        crystal.setBiasPartsPerBillion(new BigInteger("-500"));
 
         DualTimerSimulation dualTimer = new DualTimerSimulation();
-        dualTimer.cyclesAdjustmentPerClk8Overflow = 0;
+        dualTimer.adjustmentClockCyclesPerSecond = 0;
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
@@ -46,26 +47,27 @@ public class DualTimerControlTest {
             tsr.ptpClockTimeNanoseconds = dualTimer.getTimeNanoseconds();
             
             //BigInteger randomNoiseNs = BigInteger.ZERO;//= new BigInteger(Main.randbetween(-1000, 1000) + "000");
-            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-60, 60) + "000");
+            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-60000, 60000) + "");
             BigInteger controlOutput = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
                     dualTimer.getTimeNanoseconds().add(randomNoiseNs));
             
             tsr.controlOutput = controlOutput;
             result.add(tsr);
             
-            dualTimer.cyclesAdjustmentPerClk8Overflow = controlOutput.intValueExact();
+            dualTimer.adjustmentClockCyclesPerSecond = controlOutput.intValueExact();
         }
         
         return result;
     }
     
     private static double[] selectGoodPD() {
-        double bestValuesSoFar[] = {0.1, 0.5};
+        double bestValuesSoFar[] = {0.1, 0.1, 0.1};
         long bestScore = Long.MAX_VALUE;
         
-        double[] scales = {30.0, 10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01, 0.003};
+        double[] scales = {10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
         
         for (double s : scales) {
+            System.out.printf("Checking with scale %f\n", s);
             for (double[] candidate : generateCandidates(bestValuesSoFar, s)) {
                 long score = evaluateParameters(candidate);
                 if (score < bestScore) {
@@ -112,11 +114,11 @@ public class DualTimerControlTest {
         long rmsDeviationAfterSomeTime = 0;
         
         for (int repeat=0 ; repeat<10 ; repeat++) {
-            FeedbackController sim = new FeedbackMicrosecondBased(parameters[0], parameters[1]);
+            FeedbackController sim = new FeedbackPID(parameters[0], parameters[1], parameters[2]);
             
             for (TimeStepResult tsr : simulateFeedback(sim)) {
                 lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
-                if (tsr.getTrueTimeSeconds() > 3*60) {
+                if (tsr.getTrueTimeSeconds() > 10*60) {
                     long error = Math.abs(tsr.getPtpClockErrorNanos()/1000);
                     maxDeviationAfterSomeTime = Math.max(maxDeviationAfterSomeTime,error);
                     rmsDeviationAfterSomeTime += error*error;

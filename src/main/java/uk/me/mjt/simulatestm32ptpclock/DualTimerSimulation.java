@@ -6,39 +6,58 @@ import java.math.BigInteger;
 
 public class DualTimerSimulation {
     
-    private final BigInteger CLK1PERIOD = new BigInteger("180");
-    private final BigInteger CLK8PERIOD = new BigInteger("10000");
+    private final long CLK1PERIOD = 180;
+    private final long CLK8PERIOD = 10000;
     
-    private BigInteger comboClockValue = new BigInteger("0");
+    private long comboClockValue = 0;
     private long overflowCounter = 0;
     
-    public int cyclesAdjustmentPerClk8Overflow = 0;
+    public int adjustmentClockCyclesPerSecond = 0;
     
     public BigInteger clockBy(final BigInteger rtcClockCycles) {
-        BigInteger comboClockPeriod = CLK1PERIOD
-                .multiply(CLK8PERIOD)
-                .add(toBI(cyclesAdjustmentPerClk8Overflow));
+        adjustmentClockCyclesPerSecond = Math.max(-50000, Math.min(50000, adjustmentClockCyclesPerSecond));
+        int[] adjustmentSequence = generateAdjustmentSequence(adjustmentClockCyclesPerSecond);
         
-        BigInteger comboClockValueAdded = comboClockValue.add(rtcClockCycles);
+        long rtcClockCyclesRemaining = rtcClockCycles.longValueExact();
         
+        while (rtcClockCyclesRemaining > 0) {
+            int thisCycleIdx = (int)(overflowCounter % 100);
+            int adjustmentThisCycle = adjustmentSequence[thisCycleIdx];
+            
+            long comboClockPeriod = CLK1PERIOD*CLK8PERIOD+adjustmentThisCycle;
+            
+            if (comboClockValue+rtcClockCyclesRemaining < comboClockPeriod) {
+                comboClockValue += rtcClockCyclesRemaining;
+                rtcClockCyclesRemaining = 0;
+            } else {
+                long clocksToNextOverflow = comboClockPeriod - comboClockValue;
+                overflowCounter++;
+                comboClockValue = 0;
+                rtcClockCyclesRemaining -= clocksToNextOverflow;
+            }
+        }
         
-        int completeRollovers = comboClockValueAdded.divide(comboClockPeriod).intValueExact();
-        overflowCounter += completeRollovers;
+        return toBI(overflowCounter * CLK8PERIOD + comboClockValue / CLK1PERIOD);
+    }
+    
+    public static int[] generateAdjustmentSequence(int adjustmentClockCyclesPerSecond) {
+        int baseAdjustment = Math.floorDiv(adjustmentClockCyclesPerSecond, 100);
+        int remainder1 = adjustmentClockCyclesPerSecond - 100 * baseAdjustment;
+        int tenthsToAdd = Math.floorDiv(remainder1, 10);
+        int hundredthsToAdd = remainder1 - 10 * tenthsToAdd;
         
-        comboClockValue = comboClockValueAdded.mod(comboClockPeriod);
+        int[] result = new int[100];
+        for (int i=0 ; i<100 ; i++) {
+            result[i] = baseAdjustment +
+                    (i % 10 < tenthsToAdd ? 1 : 0) +
+                    (i % 10 == 9 && Math.floorDiv(i, 10) < hundredthsToAdd ? 1 : 0);
+        }
         
-        BigInteger timeMicroseconds = toBI(overflowCounter)
-                .multiply(CLK8PERIOD)
-                .add(comboClockValue.divide(CLK1PERIOD));
-        // TODO could simulate this more precisely...
-        
-        return timeMicroseconds;
+        return result;
     }
     
     public BigInteger getTimeMicroseconds() {
-        return toBI(overflowCounter)
-                .multiply(CLK8PERIOD)
-                .add(comboClockValue.divide(CLK1PERIOD));
+        return toBI(overflowCounter * CLK8PERIOD + comboClockValue / CLK1PERIOD);
     }
     
     public BigInteger getTimeNanoseconds() {
