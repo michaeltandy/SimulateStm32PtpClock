@@ -10,10 +10,10 @@ import java.util.List;
 
 public class DualTimerControlTest {
     public static void main(String[] args) {
-        double[] chosenPD = selectGoodPD();
+        //double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
-        //double[] chosenPD = {0.15,0,1};
+        double[] chosenPD = {5.916, 0.074, 6.887};
         
         System.out.println("Simulation with selected P/D values:\n");
         
@@ -24,13 +24,14 @@ public class DualTimerControlTest {
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
                     + tsr.ptpClockTimeNanoseconds + "\t"
                     + tsr.getPtpClockErrorNanos() + "\t"
-                    + tsr.controlOutput);
+                    + tsr.controlOutput + "\t"
+                    + tsr.controllerNote);
         }
     }
     
     private static List<TimeStepResult> simulateFeedback(FeedbackController sim) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.ONE_HUNDRED_EIGHTY_MHZ);
-        crystal.setBiasPartsPerBillion(new BigInteger("-500"));
+        crystal.setBiasPartsPerBillion(new BigInteger("30000"));
 
         DualTimerSimulation dualTimer = new DualTimerSimulation();
         dualTimer.adjustmentClockCyclesPerSecond = 0;
@@ -52,6 +53,7 @@ public class DualTimerControlTest {
                     dualTimer.getTimeNanoseconds().add(randomNoiseNs));
             
             tsr.controlOutput = controlOutput;
+            tsr.controllerNote = sim.getNote();
             result.add(tsr);
             
             dualTimer.adjustmentClockCyclesPerSecond = controlOutput.intValueExact();

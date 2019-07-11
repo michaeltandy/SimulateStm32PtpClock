@@ -9,6 +9,7 @@ class TimeStepResult {
     BigInteger biasedCrystalTimeNanoseconds;
     BigInteger ptpClockTimeNanoseconds;
     BigInteger controlOutput;
+    String controllerNote = null;
 
     long getPtpClockErrorNanos() {
         return ptpClockTimeNanoseconds.subtract(trueTimeNanoseconds).longValueExact();

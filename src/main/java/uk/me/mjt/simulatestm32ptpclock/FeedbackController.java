@@ -8,4 +8,8 @@ public interface FeedbackController {
 
     BigInteger updateDataGetNewControlOutput(BigDecimal trueTimeSeconds, BigInteger measuredTimeNanoseconds);
     
+    default public String getNote() {
+        return null;
+    }
+    
 }
