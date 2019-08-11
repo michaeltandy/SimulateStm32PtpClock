@@ -10,15 +10,16 @@ import java.util.List;
 
 public class DualTimerControlTest {
     public static void main(String[] args) {
-        //double[] chosenPD = selectGoodPD();
+        double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
-        double[] chosenPD = {5.916, 0.074, 6.887};
+        //double[] chosenPD = {5.916, 0.074, 6.887};
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0\t0");
         FeedbackController sim = new FeedbackPID(chosenPD[0], chosenPD[1], chosenPD[2]);
+        //FeedbackController sim = new EstimateLeastSquares();
         for (TimeStepResult tsr : simulateFeedback(sim)) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
@@ -56,7 +57,8 @@ public class DualTimerControlTest {
             tsr.controllerNote = sim.getNote();
             result.add(tsr);
             
-            dualTimer.adjustmentClockCyclesPerSecond = controlOutput.intValueExact();
+            int adjustmentPartsPPB = controlOutput.intValueExact();
+            dualTimer.adjustmentClockCyclesPerSecond = (180*adjustmentPartsPPB)/1000;
         }
         
         return result;
@@ -66,7 +68,8 @@ public class DualTimerControlTest {
         double bestValuesSoFar[] = {0.1, 0.1, 0.1};
         long bestScore = Long.MAX_VALUE;
         
-        double[] scales = {10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
+        //double[] scales = {10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
+        double[] scales = {30, 10.0, 3.0, 1.0, 0.3, 0.1};
         
         for (double s : scales) {
             System.out.printf("Checking with scale %f\n", s);

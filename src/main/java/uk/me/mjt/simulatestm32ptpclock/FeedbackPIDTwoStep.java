@@ -34,14 +34,19 @@ public class FeedbackPIDTwoStep implements FeedbackController {
             long derivativeTerm = errorMicros-lastErrorMicros;
             errorIntegral += errorMicros;
             
-            if (trueTimeMicros > 3*60*1000000) {
-                if (passedStep != true) {
+            if (trueTimeMicros > 10*60*1000000) {
+                /*if (passedStep != true) {
                     passedStep = true;
                     errorIntegral = errorIntegral * 30;
-                }
+                }*/
                 
-                pid = (integralGain/30)*errorIntegral;
-                lastNote = String.format("0\t%.4f\t0", pid);
+                pid = proportionalGain/5*errorMicros +
+                        integralGain*errorIntegral;
+                
+                lastNote = String.format("%.4f\t%.4f\t%.4f",
+                    (proportionalGain/5*errorMicros),
+                    (integralGain*errorIntegral),
+                    0.0);
                 
             } else {
             
