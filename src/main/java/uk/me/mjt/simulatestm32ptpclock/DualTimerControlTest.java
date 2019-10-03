@@ -13,14 +13,20 @@ public class DualTimerControlTest {
         double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
-        //double[] chosenPD = {5.916, 0.074, 6.887};
+        //double[] chosenPD = {10.671, 0.1, 6.834};
+        // [25.433333333333337, 0.33290656912056116, 12.522222222222236]
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0\t0");
         FeedbackController sim = new FeedbackPID(chosenPD[0], chosenPD[1], chosenPD[2]);
         //FeedbackController sim = new EstimateLeastSquares();
-        for (TimeStepResult tsr : simulateFeedback(sim)) {
+        
+        List<TimeStepResult> example = simulateFeedback(sim, 30000);
+        System.out.println("Score for this simulation: " +
+                calculateScoreForSimulationOutput(example));
+        
+        for (TimeStepResult tsr : example) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
                     + tsr.ptpClockTimeNanoseconds + "\t"
@@ -30,16 +36,16 @@ public class DualTimerControlTest {
         }
     }
     
-    private static List<TimeStepResult> simulateFeedback(FeedbackController sim) {
+    private static List<TimeStepResult> simulateFeedback(FeedbackController sim, int crystalBiasPpb) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.ONE_HUNDRED_EIGHTY_MHZ);
-        crystal.setBiasPartsPerBillion(new BigInteger("30000"));
+        crystal.setBiasPartsPerBillion(new BigInteger(""+crystalBiasPpb));
 
         DualTimerSimulation dualTimer = new DualTimerSimulation();
         dualTimer.adjustmentClockCyclesPerSecond = 0;
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
-        for (int second = 0; second < 60*20; second++) {
+        for (int second = 0; second < 60*60; second++) {
             BigInteger clocks = crystal.clockBySeconds(BigDecimal.ONE);
             dualTimer.clockBy(clocks);
 
@@ -49,7 +55,7 @@ public class DualTimerControlTest {
             tsr.ptpClockTimeNanoseconds = dualTimer.getTimeNanoseconds();
             
             //BigInteger randomNoiseNs = BigInteger.ZERO;//= new BigInteger(Main.randbetween(-1000, 1000) + "000");
-            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-60000, 60000) + "");
+            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-500000, 500000) + "");
             BigInteger controlOutput = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
                     dualTimer.getTimeNanoseconds().add(randomNoiseNs));
             
@@ -69,7 +75,7 @@ public class DualTimerControlTest {
         long bestScore = Long.MAX_VALUE;
         
         //double[] scales = {10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
-        double[] scales = {30, 10.0, 3.0, 1.0, 0.3, 0.1};
+        double[] scales = {30, 10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
         
         for (double s : scales) {
             System.out.printf("Checking with scale %f\n", s);
@@ -114,27 +120,28 @@ public class DualTimerControlTest {
     public static long evaluateParameters(double[] parameters) {
         long overallScore = 0;
         
-        long lowestUndershoot = 0;
-        long maxDeviationAfterSomeTime = 0;
-        long rmsDeviationAfterSomeTime = 0;
+        int[] crystalBiasPpb = {-150000, -30000, -5000, 0, 5000, 30000, 150000};
         
-        for (int repeat=0 ; repeat<10 ; repeat++) {
+        for (int bias : crystalBiasPpb) {
             FeedbackController sim = new FeedbackPID(parameters[0], parameters[1], parameters[2]);
-            
-            for (TimeStepResult tsr : simulateFeedback(sim)) {
-                lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
-                if (tsr.getTrueTimeSeconds() > 10*60) {
-                    long error = Math.abs(tsr.getPtpClockErrorNanos()/1000);
-                    maxDeviationAfterSomeTime = Math.max(maxDeviationAfterSomeTime,error);
-                    rmsDeviationAfterSomeTime += error*error;
-                }
-            }
-            
-            //overallScore += Math.abs(lowestUndershoot) + Math.abs(maxDeviationAfterSomeTime);
-            overallScore += rmsDeviationAfterSomeTime;
-            //overallScore += Math.abs(maxDeviationAfterSomeTime);
+            overallScore += calculateScoreForSimulationOutput(simulateFeedback(sim, bias));
         }
         
         return overallScore;
+    }
+    
+    public static long calculateScoreForSimulationOutput(List<TimeStepResult> simulationOutput) {
+        long rmsDeviationAfterSomeTime = 0;
+        //long maxDeviationAfterSomeTime = 0;
+        //long lowestUndershoot = 0;
+        for (TimeStepResult tsr : simulationOutput) {
+            //lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
+            if (tsr.getTrueTimeSeconds() > 30 * 60) {
+                long error = Math.abs(tsr.getPtpClockErrorNanos() / 1000);
+                //maxDeviationAfterSomeTime = Math.max(maxDeviationAfterSomeTime, error);
+                rmsDeviationAfterSomeTime += error * error;
+            }
+        }
+        return rmsDeviationAfterSomeTime;
     }
 }
