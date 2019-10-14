@@ -47,10 +47,9 @@ public class FeedbackPIDWindupLimit implements FeedbackController {
                     (integralGain*errorIntegral),
                     (derivativeGain*derivativeTerm));
             
+            lastErrorMicros = errorMicros;
             return new BigInteger(""+Math.round(pid));
         }
-        
-        lastErrorMicros = errorMicros;
         
         return BigInteger.ZERO;
     }

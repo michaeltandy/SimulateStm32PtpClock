@@ -41,7 +41,7 @@ public class FeedbackPIDTwoStep implements FeedbackController {
         if (lastErrorMicros != Long.MAX_VALUE) {
             long derivativeTerm = errorMicros-lastErrorMicros;
             errorIntegral += errorMicros;
-            
+
             if (trueTimeMicros < 10*60*1000000) {
                 p = proportionalGain1*errorMicros;
                 i = integralGain1*errorIntegral;
@@ -56,7 +56,7 @@ public class FeedbackPIDTwoStep implements FeedbackController {
                 d = derivativeGain2*derivativeTerm;
             }
         }
-        
+
         lastErrorMicros = errorMicros;
         lastNote = String.format("%.4f\t%.4f\t%.4f",p,i,d);
         return new BigInteger(""+Math.round(p+i+d));

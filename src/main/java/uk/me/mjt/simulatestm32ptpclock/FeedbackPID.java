@@ -40,12 +40,13 @@ public class FeedbackPID implements FeedbackController {
                     (integralGain*errorIntegral),
                     (derivativeGain*derivativeTerm));
             
+            
+            lastErrorMicros = errorMicros;
             return new BigInteger(""+Math.round(pid));
+        } else {
+            lastErrorMicros = errorMicros;
+            return BigInteger.ZERO;
         }
-        
-        lastErrorMicros = errorMicros;
-        
-        return BigInteger.ZERO;
     }
     
     public String getNote() {

@@ -15,17 +15,19 @@ public class DualTimerControlTest {
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
         //double[] chosenPD = {10.671, 0.1, 6.834};
         //double[] chosenPD = {5,0.10,0.1};
+        //double[] chosenPD = {37.9, 0.4, 11.68};
         // [25.433333333333337, 0.33290656912056116, 12.522222222222236]
         
         System.out.println("Simulation with selected P/D values:\n");
         
-        System.out.println("0\t0\t0\t0\t0");
         FeedbackController sim = makeController(chosenPD);
         //FeedbackController sim = new EstimateLeastSquares();
         
         List<TimeStepResult> example = simulateFeedback(sim, 30000);
         System.out.println("Score for this simulation: " +
                 calculateScoreForSimulationOutput(example));
+        System.out.println("Error range for this simulation: " +
+                calculateRangeForSimulationOutput(example) + " us");
         
         for (TimeStepResult tsr : example) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
@@ -72,6 +74,7 @@ public class DualTimerControlTest {
     }
     
     private static FeedbackController makeController(double[] parameters) {
+        //return new FeedbackPIDTwoStep(35.80, 0.300, 0.5, parameters[0], 0.3, parameters[1]);
         return new FeedbackPID(parameters[0], parameters[1], parameters[2]);
     }
     
@@ -146,7 +149,7 @@ public class DualTimerControlTest {
         return overallScore;
     }
     
-    public static long calculateScoreForSimulationOutput(List<TimeStepResult> simulationOutput) {
+    static long calculateScoreForSimulationOutput(List<TimeStepResult> simulationOutput) {
         long rmsDeviationAfterSomeTime = 0;
         //long maxDeviationAfterSomeTime = 0;
         //long lowestUndershoot = 0;
@@ -159,5 +162,18 @@ public class DualTimerControlTest {
             }
         }
         return rmsDeviationAfterSomeTime;
+    }
+    
+    static long calculateRangeForSimulationOutput(List<TimeStepResult> simulationOutput) {
+        long min = Long.MAX_VALUE;
+        long max = Long.MIN_VALUE;
+        for (TimeStepResult tsr : simulationOutput) {
+            if (tsr.getTrueTimeSeconds() > 15 * 60) {
+                long errorMicros = (tsr.getPtpClockErrorNanos() / 1000);
+                min = Math.min(min, errorMicros);
+                max = Math.max(max, errorMicros);
+            }
+        }
+        return max-min;
     }
 }
