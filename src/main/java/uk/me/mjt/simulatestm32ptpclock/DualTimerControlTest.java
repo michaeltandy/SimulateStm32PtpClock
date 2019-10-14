@@ -14,12 +14,13 @@ public class DualTimerControlTest {
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
         //double[] chosenPD = {10.671, 0.1, 6.834};
+        //double[] chosenPD = {5,0.10,0.1};
         // [25.433333333333337, 0.33290656912056116, 12.522222222222236]
         
         System.out.println("Simulation with selected P/D values:\n");
         
         System.out.println("0\t0\t0\t0\t0");
-        FeedbackController sim = new FeedbackPID(chosenPD[0], chosenPD[1], chosenPD[2]);
+        FeedbackController sim = makeController(chosenPD);
         //FeedbackController sim = new EstimateLeastSquares();
         
         List<TimeStepResult> example = simulateFeedback(sim, 30000);
@@ -36,7 +37,7 @@ public class DualTimerControlTest {
         }
     }
     
-    private static List<TimeStepResult> simulateFeedback(FeedbackController sim, int crystalBiasPpb) {
+    public static List<TimeStepResult> simulateFeedback(FeedbackController sim, int crystalBiasPpb) {
         BiasedCrystalSimulation crystal = new BiasedCrystalSimulation(Constants.ONE_HUNDRED_EIGHTY_MHZ);
         crystal.setBiasPartsPerBillion(new BigInteger(""+crystalBiasPpb));
 
@@ -45,7 +46,7 @@ public class DualTimerControlTest {
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
-        for (int second = 0; second < 60*60; second++) {
+        for (int second = 0; second < 60*20; second++) {
             BigInteger clocks = crystal.clockBySeconds(BigDecimal.ONE);
             dualTimer.clockBy(clocks);
 
@@ -55,7 +56,7 @@ public class DualTimerControlTest {
             tsr.ptpClockTimeNanoseconds = dualTimer.getTimeNanoseconds();
             
             //BigInteger randomNoiseNs = BigInteger.ZERO;//= new BigInteger(Main.randbetween(-1000, 1000) + "000");
-            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-500000, 500000) + "");
+            BigInteger randomNoiseNs = new BigInteger(Main.randbetween(-50000, 50000) + "");
             BigInteger controlOutput = sim.updateDataGetNewControlOutput(crystal.trueTimeSeconds,
                     dualTimer.getTimeNanoseconds().add(randomNoiseNs));
             
@@ -70,8 +71,23 @@ public class DualTimerControlTest {
         return result;
     }
     
+    private static FeedbackController makeController(double[] parameters) {
+        return new FeedbackPID(parameters[0], parameters[1], parameters[2]);
+    }
+    
+    private static int numberOfParameters() {
+        for (int i=0 ; i<=5 ; i++) {
+            double[] test = new double[i];
+            try {
+                makeController(test);
+                return i;
+            } catch (ArrayIndexOutOfBoundsException e) {}
+        }
+        throw new RuntimeException("Too many paramters?! :(");
+    }
+    
     private static double[] selectGoodPD() {
-        double bestValuesSoFar[] = {0.1, 0.1, 0.1};
+        double bestValuesSoFar[] = new double[numberOfParameters()];
         long bestScore = Long.MAX_VALUE;
         
         //double[] scales = {10.0, 3.0, 1.0, 0.3, 0.1, 0.03, 0.01};
@@ -123,7 +139,7 @@ public class DualTimerControlTest {
         int[] crystalBiasPpb = {-150000, -30000, -5000, 0, 5000, 30000, 150000};
         
         for (int bias : crystalBiasPpb) {
-            FeedbackController sim = new FeedbackPID(parameters[0], parameters[1], parameters[2]);
+            FeedbackController sim = makeController(parameters);
             overallScore += calculateScoreForSimulationOutput(simulateFeedback(sim, bias));
         }
         
@@ -136,7 +152,7 @@ public class DualTimerControlTest {
         //long lowestUndershoot = 0;
         for (TimeStepResult tsr : simulationOutput) {
             //lowestUndershoot = Math.min(lowestUndershoot, tsr.getPtpClockErrorNanos());
-            if (tsr.getTrueTimeSeconds() > 30 * 60) {
+            if (tsr.getTrueTimeSeconds() > 10 * 60) {
                 long error = Math.abs(tsr.getPtpClockErrorNanos() / 1000);
                 //maxDeviationAfterSomeTime = Math.max(maxDeviationAfterSomeTime, error);
                 rmsDeviationAfterSomeTime += error * error;
