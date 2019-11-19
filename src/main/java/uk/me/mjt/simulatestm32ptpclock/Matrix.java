@@ -74,7 +74,25 @@ public class Matrix {
         return result;
     }
     
-    public static double[][] invertTwoByTwo(double[][] mat) {
+    public static double[][] invert(double[][] mat) {
+        REQUIRE(getHeight(mat) == getWidth(mat));
+        if (getHeight(mat) == 1) {
+            return invertOneByOne(mat);
+        } else if (getHeight(mat) == 2) {
+            return invertTwoByTwo(mat);
+        } else {
+            throw new RuntimeException("Invert only implemented for 1x1 and 2x2 matrices");
+        }
+    }
+    
+    private static double[][] invertOneByOne(double[][] mat) {
+        REQUIRE(getHeight(mat) == 1);
+        REQUIRE(getWidth(mat) == 1);
+        double[][] result = {{1.0/mat[0][0]}};
+        return result;
+    }
+    
+    private static double[][] invertTwoByTwo(double[][] mat) {
         REQUIRE(getHeight(mat) == 2);
         REQUIRE(getWidth(mat) == 2);
         

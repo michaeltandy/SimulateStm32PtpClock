@@ -30,13 +30,13 @@ public class FeedbackPIDWithIIR implements FeedbackController {
         long trueTimeMicros = trueTimeSeconds.multiply(new BigDecimal("1000000")).longValueExact();
         long errorMicros = measuredTimeNanoseconds.divide(new BigInteger("1000")).longValueExact()-trueTimeMicros;
         
-        if (lastErrorMicros == Double.NaN) {
+        if (Double.isNaN(lastErrorMicros)) {
             errorSmoothed = errorMicros;
             lastErrorMicros = errorMicros;
         } else {
             double thisError;
             errorSmoothed = ((1-iir)*errorSmoothed) + (iir*errorMicros);
-            if (trueTimeMicros < 10*60*1000000) {
+            if (trueTimeMicros < 5*60*1000000) {
                 thisError = errorMicros;
             } else {
                 thisError = errorSmoothed;

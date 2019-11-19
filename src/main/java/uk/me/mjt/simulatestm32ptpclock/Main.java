@@ -11,7 +11,7 @@ import static uk.me.mjt.simulatestm32ptpclock.Constants.*;
 
 public class Main {
     
-    private static final Random rand = new Random();
+    private static final Random rand = new Random(1234);
 
     public static void main(String[] args) {
         double[] chosenPD = selectGoodPD();

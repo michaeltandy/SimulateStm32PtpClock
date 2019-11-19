@@ -10,7 +10,7 @@ import java.util.List;
 
 public class DualTimerControlTest {
     public static void main(String[] args) {
-        double[] chosenPD = selectGoodPD();
+        //double[] chosenPD = selectGoodPD();
         //double[] chosenPD = {0.098,6.397}; // Good with +-1000us rcom time jitter
         //double[] chosenPD = {0.148,8.261}; // Good with +-60us rcom time jitter
         //double[] chosenPD = {10.671, 0.1, 6.834};
@@ -20,8 +20,8 @@ public class DualTimerControlTest {
         
         System.out.println("Simulation with selected P/D values:\n");
         
-        FeedbackController sim = makeController(chosenPD);
-        //FeedbackController sim = new EstimateLeastSquares();
+        //FeedbackController sim = makeController(chosenPD);
+        FeedbackController sim = new EstimateKalman();
         
         List<TimeStepResult> example = simulateFeedback(sim, 30000);
         System.out.println("Score for this simulation: " +
@@ -75,7 +75,7 @@ public class DualTimerControlTest {
     
     private static FeedbackController makeController(double[] parameters) {
         //return new FeedbackPIDTwoStep(35.80, 0.300, 0.5, parameters[0], 0.3, parameters[1]);
-        return new FeedbackPID(parameters[0], parameters[1], parameters[2]);
+        return new FeedbackPIDWithIIR(parameters[0], parameters[1], parameters[2], 0.1);
     }
     
     private static int numberOfParameters() {
