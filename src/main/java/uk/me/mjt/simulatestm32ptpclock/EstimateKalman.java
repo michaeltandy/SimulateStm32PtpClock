@@ -14,8 +14,9 @@ public class EstimateKalman implements FeedbackController {
     double[][] u = {{0},{0}}; // Control input
     double[][] F = {{1,1},{0,1}}; // Next state function (assumes 1 second time step)
     double[][] H = {{1,0}}; // Measurement function
-    double[][] R = {{1}}; // Measurement uncertainty
+    double[][] R = {{100000}}; // Measurement uncertainty
     double[][] I = {{1,0},{0,1}}; // Identity matrix
+    double[][] Q = {{0.0001,0.0001},{0.0001,0.0001}}; // Process noise covariance
     
     public EstimateKalman() {
     }
@@ -28,7 +29,7 @@ public class EstimateKalman implements FeedbackController {
         if (sampleCount > 0) {
             // Update prediction:
             x = add(multiply(F,x),u);
-            P = multiply(F,multiply(P,transpose(F)));
+            P = add(multiply(F,multiply(P,transpose(F))), Q);
         }
         
         // Measurement update:

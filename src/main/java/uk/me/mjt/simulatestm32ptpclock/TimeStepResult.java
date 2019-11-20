@@ -4,7 +4,7 @@ package uk.me.mjt.simulatestm32ptpclock;
 import java.math.BigInteger;
 
 
-class TimeStepResult {
+public class TimeStepResult {
     BigInteger trueTimeNanoseconds;
     BigInteger biasedCrystalTimeNanoseconds;
     BigInteger ptpClockTimeNanoseconds;
@@ -17,6 +17,10 @@ class TimeStepResult {
 
     long getTrueTimeSeconds() {
         return trueTimeNanoseconds.divide(Constants.ONE_BILLION.toBigInteger()).longValueExact();
+    }
+    
+    long getClockErrorMicroseconds() {
+        return getPtpClockErrorNanos()/1000;
     }
 
 }

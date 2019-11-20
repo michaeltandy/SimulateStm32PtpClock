@@ -13,6 +13,7 @@ public class Constants {
     public static final BigDecimal ONE_HUNDRED_EIGHTY_MHZ = new BigDecimal("180000000");
     public static final BigDecimal TWO_MHZ = new BigDecimal("2000000");
     public static final BigDecimal ONE_BILLION = new BigDecimal("1000000000");
+    public static final BigInteger ONE_MILLION = new BigInteger("1000000");
     public static final BigInteger ONE_THOUSAND = new BigInteger("1000");
     
     

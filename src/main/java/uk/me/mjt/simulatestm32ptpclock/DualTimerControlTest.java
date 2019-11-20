@@ -29,14 +29,15 @@ public class DualTimerControlTest {
         System.out.println("Error range for this simulation: " +
                 calculateRangeForSimulationOutput(example) + " us");
         
-        for (TimeStepResult tsr : example) {
+        XYChart.chartTimeStepResults(example);
+        /*for (TimeStepResult tsr : example) {
             System.out.println(tsr.trueTimeNanoseconds + "\t"
                     + tsr.biasedCrystalTimeNanoseconds + "\t"
                     + tsr.ptpClockTimeNanoseconds + "\t"
                     + tsr.getPtpClockErrorNanos() + "\t"
                     + tsr.controlOutput + "\t"
                     + tsr.controllerNote);
-        }
+        }*/
     }
     
     public static List<TimeStepResult> simulateFeedback(FeedbackController sim, int crystalBiasPpb) {
@@ -48,7 +49,10 @@ public class DualTimerControlTest {
         
         ArrayList<TimeStepResult> result = new ArrayList();
         
-        for (int second = 0; second < 60*20; second++) {
+        for (int second = 0; second < 60*60*5; second++) {
+            int timeDependentCrystalBiasPpb = (int)Math.round(17000.0/120.0*Math.sin(Math.PI * second / 9000));
+            crystal.setBiasPartsPerBillion(new BigInteger(""+(crystalBiasPpb+timeDependentCrystalBiasPpb)));
+            
             BigInteger clocks = crystal.clockBySeconds(BigDecimal.ONE);
             dualTimer.clockBy(clocks);
 
