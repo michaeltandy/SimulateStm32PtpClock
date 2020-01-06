@@ -10,13 +10,13 @@ public class EstimateKalman implements FeedbackController {
     int sampleCount = 0;
     
     double[][] x = {{0},{0}}; // Initial state (time error and rate of error increase)
-    double[][] P = {{1000,0},{0,1000}}; // Initial uncertainty
+    double[][] P = {{10000000,0},{0,10000000}}; // Initial uncertainty
     double[][] u = {{0},{0}}; // Control input
     double[][] F = {{1,1},{0,1}}; // Next state function (assumes 1 second time step)
     double[][] H = {{1,0}}; // Measurement function
-    double[][] R = {{100000}}; // Measurement uncertainty
+    double[][] R = {{50000}}; // Measurement uncertainty
     double[][] I = {{1,0},{0,1}}; // Identity matrix
-    double[][] Q = {{0.0001,0.0001},{0.0001,0.0001}}; // Process noise covariance
+    double[][] Q = {{1,0.007},{0.007,0.000044}}; // Process noise covariance
     
     public EstimateKalman() {
     }

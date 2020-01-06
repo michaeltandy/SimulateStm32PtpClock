@@ -61,6 +61,6 @@ public class MatrixTest {
     @Test
     public void testInvertTwoByTwo() {
         double[][] expResult = {{-2, 1}, {3.0/2, -1.0/2}};
-        assertArrayEquals(expResult, Matrix.invertTwoByTwo(SQUARE_1234));
+        assertArrayEquals(expResult, Matrix.invert(SQUARE_1234));
     }
 }
